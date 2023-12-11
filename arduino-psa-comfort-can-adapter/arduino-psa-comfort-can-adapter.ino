@@ -45,6 +45,7 @@ all copies or substantial portions of the Software.
 ///////////////////////
 byte checksumm_0E6(const byte* frame);
 void debug_print(const char* fmt, ...);
+void debug_print_can(can_frame &frame);
 
 ////////////////////
 // Initialization //
@@ -410,22 +411,7 @@ void loop() {
     int len = canMsgRcv.can_dlc;
 
     if (debugCAN0) {
-      Serial.print("FRAME:ID=");
-      Serial.print(id);
-      Serial.print(":LEN=");
-      Serial.print(len);
-
-      char tmp[3];
-      for (int i = 0; i < len; i++) {
-        Serial.print(":");
-
-        snprintf(tmp, 3, "%02X", canMsgRcv.data[i]);
-
-        Serial.print(tmp);
-      }
-
-      Serial.println();
-
+      debug_print_can(canMsgRcv);
       CAN1.sendMessage( & canMsgRcv);
     } else if (!debugCAN1) {
       if (id == 0x15B) {
@@ -1504,22 +1490,7 @@ void loop() {
     int len = canMsgRcv.can_dlc;
 
     if (debugCAN1) {
-      Serial.print("FRAME:ID=");
-      Serial.print(id);
-      Serial.print(":LEN=");
-      Serial.print(len);
-
-      char tmp[3];
-      for (int i = 0; i < len; i++) {
-        Serial.print(":");
-
-        snprintf(tmp, 3, "%02X", canMsgRcv.data[i]);
-
-        Serial.print(tmp);
-      }
-
-      Serial.println();
-
+      debug_print_can(canMsgRcv);
       CAN0.sendMessage( & canMsgRcv);
     } else if (!debugCAN0) {
       if (id == 0x260 || id == 0x361) {
@@ -1964,3 +1935,13 @@ void debug_print(const char* fmt, ...) {
      Serial.println(buffer);
 }
 
+void debug_print_can(can_frame &frame) {
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "FRAME:ID=%u:LEN=%u", frame.can_id, frame.can_dlc);
+    uint8_t current = strlen(buffer);
+    for (uint8_t i = 0; i < frame.can_dlc; i++) {
+        snprintf(&buffer[current], sizeof(buffer) - current, ":%02X", frame.data[i]);
+        current += 3;
+    }
+    Serial.println(buffer);
+}

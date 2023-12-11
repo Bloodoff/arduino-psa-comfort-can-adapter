@@ -27,6 +27,7 @@ all copies or substantial portions of the Software.
 #include <TimeLib.h>
 #include <Wire.h>
 #include <DS1307RTC.h> // https://github.com/PaulStoffregen/DS1307RTC
+#include <digitalWriteFast.h>
 #include <mcp2515.h> // https://github.com/autowp/arduino-mcp2515 + https://github.com/watterott/Arduino-Libs/tree/master/digitalWriteFast
 
 /////////////////////
@@ -43,6 +44,7 @@ all copies or substantial portions of the Software.
 // Private functions //
 ///////////////////////
 byte checksumm_0E6(const byte* frame);
+void debug_print(const char* fmt, ...);
 
 ////////////////////
 // Initialization //
@@ -238,21 +240,19 @@ void setup() {
   if (SerialEnabled) {
     // Initalize Serial for debug
     Serial.begin(SERIAL_SPEED);
-
-    // CAN-BUS from car
-    Serial.println("Initialization CAN0");
   }
 
+  // CAN-BUS from car
+  debug_print("Initialization CAN0");
+  
   CAN0.reset();
   CAN0.setBitrate(CAN_SPEED, CAN_FREQ);
   while (CAN0.setNormalMode() != MCP2515::ERROR_OK) {
     delay(100);
   }
 
-  if (SerialEnabled) {
-    // CAN-BUS to CAN2010 device(s)
-    Serial.println("Initialization CAN1");
-  }
+  // CAN-BUS to CAN2010 device(s)
+  debug_print("Initialization CAN1");
 
   CAN1.reset();
   CAN1.setBitrate(CAN_SPEED, CAN_FREQ);
@@ -262,17 +262,15 @@ void setup() {
 
   setSyncProvider(RTC.get); // Get time from the RTC module
   if (timeStatus() != timeSet) {
-    if (SerialEnabled) {
-      Serial.println("Unable to sync with the RTC");
-    }
+    debug_print("Unable to sync with the RTC");
 
     // Set default time (01/01/2020 00:00)
     setTime(Time_hour, Time_minute, 0, Time_day, Time_month, Time_year);
     EEPROM.update(5, Time_day);
     EEPROM.update(6, Time_month);
     EEPROM.put(7, Time_year);
-  } else if (SerialEnabled) {
-    Serial.println("RTC has set the system time");
+  } else {
+    debug_print("RTC has set the system time");
   }
 
   // Set hour on CAN-BUS Clock
@@ -294,23 +292,8 @@ void setup() {
   canMsgSnd.can_id = 0x5E5;
   canMsgSnd.can_dlc = 8;
   CAN0.sendMessage( & canMsgSnd);
-
-  if (SerialEnabled) {
-    Serial.print("Current Time: ");
-    Serial.print(day());
-    Serial.print("/");
-    Serial.print(month());
-    Serial.print("/");
-    Serial.print(year());
-
-    Serial.print(" ");
-
-    Serial.print(hour());
-    Serial.print(":");
-    Serial.print(minute());
-
-    Serial.println();
-  }
+  
+  debug_print("Current Time: %u/%u/%u %u:%u", day(), month(), year(), hour(), minute());
 }
 
 void loop() {
@@ -320,9 +303,9 @@ void loop() {
     // Receive buttons from the car
     if (((millis() - lastDebounceTime) > debounceDelay)) {
       tmpVal = 0;
-      if (!digitalRead(menuButton)) tmpVal += 0b001;
-      if (!digitalRead(volDownButton)) tmpVal += 0b010;
-      if (!digitalRead(volUpButton)) tmpVal += 0b100;
+      if (!digitalReadFast(menuButton)) tmpVal += 0b001;
+      if (!digitalReadFast(volDownButton)) tmpVal += 0b010;
+      if (!digitalReadFast(volUpButton)) tmpVal += 0b100;
       if (tmpVal != lastButtonState) {
         buttonPushTime = millis();
         buttonSendTime = 0;
@@ -345,17 +328,14 @@ void loop() {
           // Menu button
           if (buttonSendTime == 0) {
             CAN1.sendMessage( & canMsgSnd);
-            if (SerialEnabled) {
-              Serial.println("Menu");
-            }
+            debug_print("Menu");
+
             lastDebounceTime = millis();
             buttonSendTime = millis();
             //buttonPushState = 1;
           } else if (millis() - buttonPushTime > 800 && ((millis() - buttonPushTime < 2000 && millis() - buttonSendTime > 600) || (millis() - buttonPushTime > 2000 && millis() - buttonSendTime > 350))) {
             CAN1.sendMessage( & canMsgSnd);
-            if (SerialEnabled) {
-              Serial.println("Menu");
-            }
+            debug_print("Menu");
             buttonSendTime = millis();
             lastDebounceTime = millis();
           }
@@ -369,17 +349,13 @@ void loop() {
           // Menu button
           if (buttonSendTime == 0) {
             CAN1.sendMessage( & canMsgSnd);
-            if (SerialEnabled) {
-              Serial.println("Vol -");
-            }
+            debug_print("Vol -");
             lastDebounceTime = millis();
             buttonSendTime = millis();
             //buttonPushState = 1;
           } else if (millis() - buttonPushTime > 800 && ((millis() - buttonPushTime < 2000 && millis() - buttonSendTime > 600) || (millis() - buttonPushTime > 2000 && millis() - buttonSendTime > 350))) {
             CAN1.sendMessage( & canMsgSnd);
-            if (SerialEnabled) {
-              Serial.println("Vol -");
-            }
+            debug_print("Vol -");
             buttonSendTime = millis();
             lastDebounceTime = millis();
           }
@@ -393,17 +369,13 @@ void loop() {
           // Menu button
           if (buttonSendTime == 0) {
             CAN1.sendMessage( & canMsgSnd);
-            if (SerialEnabled) {
-              Serial.println("Vol +");
-            }
+            debug_print("Vol +");
             lastDebounceTime = millis();
             buttonSendTime = millis();
             //buttonPushState = 1;
           } else if (millis() - buttonPushTime > 800 && ((millis() - buttonPushTime < 2000 && millis() - buttonSendTime > 600) || (millis() - buttonPushTime > 2000 && millis() - buttonSendTime > 350))) {
             CAN1.sendMessage( & canMsgSnd);
-            if (SerialEnabled) {
-              Serial.println("Vol +");
-            }
+            debug_print("Vol +");
             buttonSendTime = millis();
             lastDebounceTime = millis();
           }
@@ -417,9 +389,7 @@ void loop() {
           // Menu button
           if (buttonSendTime == 0) {
             CAN1.sendMessage( & canMsgSnd);
-            if (SerialEnabled) {
-              Serial.println("Mute");
-            }
+            debug_print("Mute");
             lastDebounceTime = millis();
             buttonSendTime = millis();
             //buttonPushState = 1;
@@ -462,14 +432,14 @@ void loop() {
         // Do not send back converted frames between networks
       } else if (id == 0x36 && len == 8) { // Economy Mode detection
         if (bitRead(canMsgRcv.data[2], 7) == 1) {
-          if (!EconomyMode && SerialEnabled) {
-            Serial.println("Economy mode ON");
+          if (!EconomyMode) {
+            debug_print("Economy mode ON");
           }
 
           EconomyMode = true;
         } else {
-          if (EconomyMode && SerialEnabled) {
-            Serial.println("Economy mode OFF");
+          if (EconomyMode) {
+            debug_print("Economy mode OFF");
           }
 
           EconomyMode = false;
@@ -895,28 +865,23 @@ void loop() {
       } else if (id == 0xF6 && len == 8) {
         tmpVal = canMsgRcv.data[0];
         if (tmpVal > 128) {
-          if (!Ignition && SerialEnabled) {
-            Serial.println("Ignition ON");
+          if (!Ignition) {
+            debug_print("Ignition ON");
           }
 
           Ignition = true;
         } else {
-          if (Ignition && SerialEnabled) {
-            Serial.println("Ignition OFF");
+          if (Ignition) {
+            debug_print("Ignition OFF");
           }
 
           Ignition = false;
         }
 
-        tmpVal = ceil(canMsgRcv.data[5] / 2.0) - 40; // Temperatures can be negative but we only have 0 > 255, the new range is starting from -40°C
+        tmpVal = (canMsgRcv.data[5] >> 1) - 40; // Temperatures can be negative but we only have 0 > 255, the new range is starting from -40°C (formula: canMsgRcv.data[5]/2 -40)
         if (Temperature != tmpVal) {
           Temperature = tmpVal;
-
-          if (SerialEnabled) {
-            Serial.print("Ext. Temperature: ");
-            Serial.print(tmpVal);
-            Serial.println("°C");
-          }
+          debug_print("Ext. Temperature: %i °C", tmpVal);
         }
 
         CAN1.sendMessage( & canMsgRcv);
@@ -1251,24 +1216,22 @@ void loop() {
         }
       } else if (id == 0x3A7 && len == 8) { // Maintenance
         canMsgSnd.data[0] = 0x40;
-        canMsgSnd.data[1] = canMsgRcv.data[5]; // Value x255 +
+        // It's a WORD type values, for kilomters divided by 20
+        canMsgSnd.data[1] = canMsgRcv.data[5]; // Value x256 +
         canMsgSnd.data[2] = canMsgRcv.data[6]; // Value x1 = Number of days till maintenance (FF FF if disabled)
         canMsgSnd.data[3] = canMsgRcv.data[3]; // Value x5120 +
         canMsgSnd.data[4] = canMsgRcv.data[4]; // Value x20 = km left till maintenance
         canMsgSnd.can_id = 0x3E7; // New maintenance frame ID
         canMsgSnd.can_dlc = 5;
 
-        if (SerialEnabled && !MaintenanceDisplayed) {
-          Serial.print("Next maintenance in: ");
-          if (canMsgRcv.data[3] != 0xFF && canMsgRcv.data[4] != 0xFF) {
-            tmpVal = (canMsgRcv.data[3] * 5120) + (canMsgRcv.data[4] * 20);
-            Serial.print(tmpVal);
-            Serial.println(" km");
+        if (!MaintenanceDisplayed) {
+          uint16_t tmpVal = (canMsgRcv.data[3] << 8) | canMsgRcv.data[4];
+          if (tmpVal != 0xFFFF) {
+            debug_print("Next maintenance in: %u * 20 km", tmpVal);
           }
-          if (canMsgRcv.data[5] != 0xFF && canMsgRcv.data[6] != 0xFF) {
-            tmpVal = (canMsgRcv.data[5] * 255) + canMsgRcv.data[6];
-            Serial.print(tmpVal);
-            Serial.println(" days");
+          tmpVal = (canMsgRcv.data[5] << 8) | canMsgRcv.data[6];
+          if (tmpVal != 0xFFFF) {
+            debug_print("Next maintenance in: %u days", tmpVal);
           }
           MaintenanceDisplayed = true;
         }
@@ -1311,16 +1274,9 @@ void loop() {
             languageAndUnitNum = languageAndUnitNum + 1;
           }
           EEPROM.update(0, languageAndUnitNum);
-
-          if (SerialEnabled) {
-            Serial.print("CAN2004 Matrix - Change Language: ");
-            Serial.print(tmpVal);
-            Serial.println();
-          }
+          debug_print("CAN2004 Matrix - Change Language: %u", tmpVal);
         } else {
-          Serial.print("CAN2004 Matrix - Unsupported language ID: ");
-          Serial.print(tmpVal);
-          Serial.println();
+          debug_print("CAN2004 Matrix - Unsupported language ID: %u", tmpVal);
         }
       } else if (id == 0x361) { // Personalization menus availability
         bitWrite(canMsgSnd.data[0], 7, 1); // Parameters availability
@@ -1588,22 +1544,7 @@ void loop() {
         canMsgSnd.can_dlc = 1;
         CAN0.sendMessage( & canMsgSnd);
 
-        if (SerialEnabled) {
-          Serial.print("Change Hour/Date: ");
-          Serial.print(day());
-          Serial.print("/");
-          Serial.print(month());
-          Serial.print("/");
-          Serial.print(year());
-
-          Serial.print(" ");
-
-          Serial.print(hour());
-          Serial.print(":");
-          Serial.print(minute());
-
-          Serial.println();
-        }
+        debug_print("Change Hour/Date: %u/%u/%u %u:%u", day(), month(), year(), hour(), minute());
       } else if (id == 0x1A9 && len == 8) { // Telematic commands
         TelematicPresent = true;
 
@@ -1703,11 +1644,7 @@ void loop() {
             languageAndUnitNum = tmpVal;
             EEPROM.update(0, languageAndUnitNum);
 
-            if (SerialEnabled) {
-              Serial.print("Telematic - Change Language and Unit (Number): ");
-              Serial.print(tmpVal);
-              Serial.println();
-            }
+            debug_print("Telematic - Change Language and Unit (Number): %u", tmpVal);
 
             tmpVal = canMsgRcv.data[1];
             if (tmpVal >= 128) {
@@ -1724,33 +1661,22 @@ void loop() {
               TemperatureInF = true;
               EEPROM.update(3, 1);
 
-              if (SerialEnabled) {
-                Serial.print("Telematic - Change Temperature Type: Fahrenheit");
-                Serial.println();
-              }
+              debug_print("Telematic - Change Temperature Type: Fahrenheit");
             } else if (tmpVal >= 0) {
               TemperatureInF = false;
               EEPROM.update(3, 0);
 
-              if (SerialEnabled) {
-                Serial.print("Telematic - Change Temperature Type: Celcius");
-                Serial.println();
-              }
+              debug_print("Telematic - Change Temperature Type: Celcius");
             }
           } else {
-            tmpVal = ceil(tmpVal / 4.0);
+            tmpVal = tmpVal >> 2;
             if (canMsgRcv.data[1] >= 128) {
               tmpVal--;
             }
             languageID = tmpVal;
 
             // CAN2004 Head-up panel is only one-way talking, we can't change the language on it from the CAN2010 Telematic :-(
-
-            if (SerialEnabled) {
-              Serial.print("Telematic - Change Language (ID): ");
-              Serial.print(tmpVal);
-              Serial.println();
-            }
+            debug_print("Telematic - Change Language (ID): %u", tmpVal);
           }
 
           // Personalization settings change
@@ -1884,25 +1810,25 @@ void loop() {
         // CAN2004 Telematic Range: (-9) "54" > (-7) "57" > ... > "72" (+9) ("63" = 0)
         // CAN2010 Telematic Range: "32" > "88" ("60" = 0)
         tmpVal = canMsgRcv.data[2];
-        canMsgRcv.data[2] = ((tmpVal - 32) / 4) + 57; // Converted value
+        canMsgRcv.data[2] = ((tmpVal - 32) >> 2) + 57; // Converted value
 
         // Treble
         // CAN2004 Telematic Range: (-9) "54" > (-7) "57" > ... > "72" (+9) ("63" = 0)
         // CAN2010 Telematic Range: "32" > "88" ("60" = 0)
         tmpVal = canMsgRcv.data[3];
-        canMsgRcv.data[4] = ((tmpVal - 32) / 4) + 57; // Converted value on position 4 (while it's on 3 on a old amplifier)
+        canMsgRcv.data[4] = ((tmpVal - 32) >> 2) + 57; // Converted value on position 4 (while it's on 3 on a old amplifier)
 
         // Balance - Left / Right
         // CAN2004 Telematic Range: (-9) "54" > (-7) "57" > ... > "72" (+9) ("63" = 0)
         // CAN2010 Telematic Range: "32" > "88" ("60" = 0)
         tmpVal = canMsgRcv.data[1];
-        canMsgRcv.data[1] = ((tmpVal - 32) / 4) + 57; // Converted value
+        canMsgRcv.data[1] = ((tmpVal - 32) >> 2) + 57; // Converted value
 
         // Balance - Front / Back
         // CAN2004 Telematic Range: (-9) "54" > (-7) "57" > ... > "72" (+9) ("63" = 0)
         // CAN2010 Telematic Range: "32" > "88" ("60" = 0)
         tmpVal = canMsgRcv.data[0];
-        canMsgRcv.data[0] = ((tmpVal - 32) / 4) + 57; // Converted value
+        canMsgRcv.data[0] = ((tmpVal - 32) >> 2) + 57; // Converted value
 
         // Mediums ?
         canMsgRcv.data[3] = 63; // 0x3F = 63
@@ -1947,9 +1873,8 @@ void sendPOPup(bool present, int id, byte priority, byte parameters) {
     alertsCache[firstEmptyPos] = id;
     alertsParametersCache[firstEmptyPos] = parameters;
 
-    if (SerialEnabled && present) {
-      Serial.print("Notification sent with message ID: ");
-      Serial.println(id);
+    if (present) {
+      debug_print("Notification sent with message ID: %u", id);
     }
   }
 
@@ -2026,3 +1951,16 @@ byte checksumm_0E6(const byte* frame)
     if (iter >= 16) iter = 0;
     return cursumm;
 }
+
+void debug_print(const char* fmt, ...) {
+     if (!SerialEnabled) {
+        return;
+     }
+     char buffer[128];
+     va_list argptr;
+     va_start(argptr, fmt);
+     vsnprintf(buffer, 128, fmt, argptr);
+     va_end(argptr);
+     Serial.println(buffer);
+}
+

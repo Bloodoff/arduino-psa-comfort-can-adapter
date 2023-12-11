@@ -1124,11 +1124,17 @@ void loop() {
 
         customTimeStamp = (long) hour() * (long) 3600 + minute() * 60 + second();
         daysSinceYearStart = daysSinceYearStartFct();
-
-        canMsgSnd.data[0] = (((1 << 8) - 1) & (customTimeStamp >> (12)));
-        canMsgSnd.data[1] = (((1 << 8) - 1) & (customTimeStamp >> (4)));
-        canMsgSnd.data[2] = (((((1 << 4) - 1) & (customTimeStamp)) << 4)) + (((1 << 4) - 1) & (daysSinceYearStart >> (8)));
-        canMsgSnd.data[3] = (((1 << 8) - 1) & (daysSinceYearStart));
+        /* 
+        customTimeStamp maximum value is 86400 (0x15180)
+        daysSinceYearStart maximum value is 366 (0x16E)
+        this two values packs into first four bytes in CAN frame (bits from high to low)
+        T - 4 bits of customTimeStamp, D - 4 bits of daysSinceYearStart
+        CAN DATA: [TT][TT][TD][DD][0x00][0xC0][LANG]
+        */
+        canMsgSnd.data[0] = 0xFF & (customTimeStamp >> 12);
+        canMsgSnd.data[1] = 0xFF & (customTimeStamp >> 4);
+        canMsgSnd.data[2] = ((0x0F & customTimeStamp) << 4) | ( 0x0F & (daysSinceYearStart >> 8));
+        canMsgSnd.data[3] = 0xFF & daysSinceYearStart;
         canMsgSnd.data[4] = 0x00;
         canMsgSnd.data[5] = 0xC0;
         canMsgSnd.data[6] = languageID;

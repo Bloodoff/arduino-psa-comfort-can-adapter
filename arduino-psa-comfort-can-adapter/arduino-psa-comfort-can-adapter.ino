@@ -46,6 +46,7 @@ all copies or substantial portions of the Software.
 byte checksumm_0E6(const byte* frame);
 void debug_print(const char* fmt, ...);
 void debug_print_can(can_frame &frame);
+bool forge_canframe_5E5(can_frame &frame);
 
 ////////////////////
 // Initialization //
@@ -282,17 +283,8 @@ void setup() {
   CAN0.sendMessage( & canMsgSnd);
 
   // Send fake EMF version
-  canMsgSnd.data[0] = 0x25;
-  canMsgSnd.data[1] = 0x0A;
-  canMsgSnd.data[2] = 0x0B;
-  canMsgSnd.data[3] = 0x04;
-  canMsgSnd.data[4] = 0x0C;
-  canMsgSnd.data[5] = 0x01;
-  canMsgSnd.data[6] = 0x20;
-  canMsgSnd.data[7] = 0x11;
-  canMsgSnd.can_id = 0x5E5;
-  canMsgSnd.can_dlc = 8;
-  CAN0.sendMessage( & canMsgSnd);
+  forge_canframe_5E5(canMsgSnd);
+  CAN0.sendMessage(&canMsgSnd);
   
   debug_print("Current Time: %u/%u/%u %u:%u", day(), month(), year(), hour(), minute());
 }
@@ -1880,6 +1872,21 @@ void sendPOPup(bool present, int id, byte priority, byte parameters) {
   CAN1.sendMessage( & canMsgSnd);
 
   return;
+}
+
+
+bool forge_canframe_5E5(can_frame &frame) {
+    frame.can_id = 0x5E5;
+    frame.can_dlc = 8;
+    frame.data[0] = 0x25;
+    frame.data[1] = 0x0A;
+    frame.data[2] = 0x0B;
+    frame.data[3] = 0x04;
+    frame.data[4] = 0x0C;
+    frame.data[5] = 0x01;
+    frame.data[6] = 0x20;
+    frame.data[7] = 0x11;
+    return true;
 }
 
 int daysSinceYearStartFct() {

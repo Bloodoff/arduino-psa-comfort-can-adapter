@@ -408,8 +408,10 @@ void loop() {
 
     if (debugCAN0) {
       debug_print_can(canMsgRcv);
+    }
+    if (debugCAN0 || debugCAN1) {
       CAN1.sendMessage( & canMsgRcv);
-    } else if (!debugCAN1) {
+    } else {
       if (id == 0x15B) {
         // Do not send back converted frames between networks
       } else if (id == 0x36 && len == 8) { // Economy Mode detection
@@ -1122,13 +1124,10 @@ void loop() {
           }
         }
       } else {
-        CAN1.sendMessage( & canMsgRcv);
+        CAN1.sendMessage(&canMsgRcv);
       }
-    } else {
-      CAN1.sendMessage( & canMsgRcv);
     }
   }
-
   // Forward messages from the CAN2010 device(s) to the car
   if (CAN1.readMessage( & canMsgRcv) == MCP2515::ERROR_OK) {
     int id = canMsgRcv.can_id;
@@ -1136,8 +1135,10 @@ void loop() {
 
     if (debugCAN1) {
       debug_print_can(canMsgRcv);
-      CAN0.sendMessage( & canMsgRcv);
-    } else if (!debugCAN0) {
+    }
+    if (debugCAN0 || debugCAN1) {
+      CAN0.sendMessage(&canMsgRcv);
+    } else {
       if (id == 0x260 || id == 0x361) {
         // Do not send back converted frames between networks
       } else if (id == 0x39B && len == 5) {
@@ -1451,12 +1452,9 @@ void loop() {
 
         CAN0.sendMessage( & canMsgRcv);
       } else {
-        CAN0.sendMessage( & canMsgRcv);
+        CAN0.sendMessage(&canMsgRcv);
       }
-    } else {
-      CAN0.sendMessage( & canMsgRcv);
     }
-
   }
 }
 

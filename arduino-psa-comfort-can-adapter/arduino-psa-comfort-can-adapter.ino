@@ -50,6 +50,7 @@ bool forge_canframe_5E5(can_frame &frame);
 bool translate_canframe_0E6(const can_frame &recv, can_frame &send);
 bool translate_canframe_168(const can_frame &recv, can_frame &send);
 bool translate_canframe_120(const can_frame &recv, can_frame &send);
+bool translate_canframe_3A7(const can_frame &recv, can_frame &send);
 ////////////////////
 // Initialization //
 ////////////////////
@@ -114,7 +115,6 @@ bool WindShieldAerator = false;
 bool CentralAerator = false;
 bool AutoFan = false;
 byte FanPosition = 0;
-bool MaintenanceDisplayed = false;
 int buttonState = 0;
 int lastButtonState = 0;
 long lastDebounceTime = 0;
@@ -960,27 +960,7 @@ void loop() {
           CAN0.sendMessage( & canMsgSnd);
         }
       } else if (id == 0x3A7 && len == 8) { // Maintenance
-        canMsgSnd.data[0] = 0x40;
-        // It's a WORD type values, for kilomters divided by 20
-        canMsgSnd.data[1] = canMsgRcv.data[5]; // Value x256 +
-        canMsgSnd.data[2] = canMsgRcv.data[6]; // Value x1 = Number of days till maintenance (FF FF if disabled)
-        canMsgSnd.data[3] = canMsgRcv.data[3]; // Value x5120 +
-        canMsgSnd.data[4] = canMsgRcv.data[4]; // Value x20 = km left till maintenance
-        canMsgSnd.can_id = 0x3E7; // New maintenance frame ID
-        canMsgSnd.can_dlc = 5;
-
-        if (!MaintenanceDisplayed) {
-          uint16_t tmpVal = (canMsgRcv.data[3] << 8) | canMsgRcv.data[4];
-          if (tmpVal != 0xFFFF) {
-            debug_print("Next maintenance in: %u * 20 km", tmpVal);
-          }
-          tmpVal = (canMsgRcv.data[5] << 8) | canMsgRcv.data[6];
-          if (tmpVal != 0xFFFF) {
-            debug_print("Next maintenance in: %u days", tmpVal);
-          }
-          MaintenanceDisplayed = true;
-        }
-
+        translate_canframe_3A7(canMsgRcv, canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
         if (Send_CAN2010_ForgedMessages) {
           CAN0.sendMessage( & canMsgSnd);
@@ -1648,6 +1628,31 @@ bool forge_canframe_5E5(can_frame &frame) {
     frame.data[6] = 0x20;
     frame.data[7] = 0x11;
     return true;
+}
+
+bool translate_canframe_3A7(const can_frame &recv, can_frame &send) {
+    static bool MaintenanceDisplayed = false;
+    send.can_id = 0x3E7; // New maintenance frame ID
+    send.can_dlc = 5;
+
+    send.data[0] = 0x40;
+    // It's a WORD type values, for kilomters divided by 20
+    send.data[1] = recv.data[5]; // Value x256 +
+    send.data[2] = recv.data[6]; // Value x1 = Number of days till maintenance (FF FF if disabled)
+    send.data[3] = recv.data[3]; // Value x5120 +
+    send.data[4] = recv.data[4]; // Value x20 = km left till maintenance
+
+    if (!MaintenanceDisplayed) {
+      uint16_t tmpVal = (recv.data[3] << 8) | recv.data[4];
+      if (tmpVal != 0xFFFF) {
+        debug_print("Next maintenance in: %u * 20 km", tmpVal);
+      }
+      tmpVal = (recv.data[5] << 8) | recv.data[6];
+      if (tmpVal != 0xFFFF) {
+        debug_print("Next maintenance in: %u days", tmpVal);
+      }
+      MaintenanceDisplayed = true;
+    }
 }
 
 bool translate_canframe_120(const can_frame &recv, can_frame &send) {

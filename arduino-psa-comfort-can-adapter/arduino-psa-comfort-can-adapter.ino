@@ -47,6 +47,7 @@ byte checksumm_0E6(const byte* frame);
 void debug_print(const char* fmt, ...);
 void debug_print_can(can_frame &frame);
 bool forge_canframe_5E5(can_frame &frame);
+bool translate_canframe_0E6(const can_frame &recv, can_frame &send);
 
 ////////////////////
 // Initialization //
@@ -469,16 +470,7 @@ void loop() {
         canMsgSnd.can_dlc = 8;
         CAN1.sendMessage( & canMsgSnd);
       } else if (id == 0xE6 && len < 8) { // ABS status frame, increase length
-        canMsgSnd.data[0] = canMsgRcv.data[0]; // Status lights / Alerts
-        canMsgSnd.data[1] = canMsgRcv.data[1]; // Rear left rotations
-        canMsgSnd.data[2] = canMsgRcv.data[2]; // Rear left rotations
-        canMsgSnd.data[3] = canMsgRcv.data[3]; // Rear right rotations
-        canMsgSnd.data[4] = canMsgRcv.data[4]; // Rear right rotations
-        canMsgSnd.data[5] = canMsgRcv.data[5]; // Battery Voltage measured by ABS
-        canMsgSnd.data[6] = canMsgRcv.data[6]; // STT / Slope / Emergency Braking
-        canMsgSnd.data[7] = checksumm_0E6(canMsgSnd.data); // Checksum / Counter : Test needed
-        canMsgSnd.can_id = 0xE6;
-        canMsgSnd.can_dlc = 8;
+        translate_canframe_0E6(canMsgRcv, canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
       } else if (id == 0x21F && len == 3) { // Steering wheel commands - Generic
         tmpVal = canMsgRcv.data[0];
@@ -1886,6 +1878,20 @@ bool forge_canframe_5E5(can_frame &frame) {
     frame.data[5] = 0x01;
     frame.data[6] = 0x20;
     frame.data[7] = 0x11;
+    return true;
+}
+
+bool translate_canframe_0E6(const can_frame &recv, can_frame &send) {
+    send.can_id = 0xE6;
+    send.can_dlc = 8;
+    send.data[0] = recv.data[0]; // Status lights / Alerts
+    send.data[1] = recv.data[1]; // Rear left rotations
+    send.data[2] = recv.data[2]; // Rear left rotations
+    send.data[3] = recv.data[3]; // Rear right rotations
+    send.data[4] = recv.data[4]; // Rear right rotations
+    send.data[5] = recv.data[5]; // Battery Voltage measured by ABS
+    send.data[6] = recv.data[6]; // STT / Slope / Emergency Braking
+    send.data[7] = checksumm_0E6(send.data); // Checksum / Counter : Test needed
     return true;
 }
 

@@ -48,7 +48,7 @@ void debug_print(const char* fmt, ...);
 void debug_print_can(can_frame &frame);
 bool forge_canframe_5E5(can_frame &frame);
 bool translate_canframe_0E6(const can_frame &recv, can_frame &send);
-
+bool translate_canframe_168(const can_frame &recv, can_frame &send);
 ////////////////////
 // Initialization //
 ////////////////////
@@ -856,24 +856,7 @@ void loop() {
 
         CAN1.sendMessage( & canMsgRcv);
       } else if (id == 0x168 && len == 8) { // Instrument Panel - WIP
-        canMsgSnd.data[0] = canMsgRcv.data[0]; // Alerts
-        canMsgSnd.data[1] = canMsgRcv.data[1];
-        canMsgSnd.data[2] = canMsgRcv.data[2];
-        canMsgSnd.data[3] = canMsgRcv.data[3];
-        canMsgSnd.data[4] = canMsgRcv.data[4];
-        canMsgSnd.data[5] = canMsgRcv.data[5];
-        bitWrite(canMsgSnd.data[6], 7, 0);
-        bitWrite(canMsgSnd.data[6], 6, 1); // Ambiance
-        bitWrite(canMsgSnd.data[6], 5, 1); // EMF availability
-        bitWrite(canMsgSnd.data[6], 4, bitRead(canMsgRcv.data[5], 0)); // Gearbox report while driving
-        bitWrite(canMsgSnd.data[6], 3, bitRead(canMsgRcv.data[6], 7)); // Gearbox report while driving
-        bitWrite(canMsgSnd.data[6], 2, bitRead(canMsgRcv.data[6], 6)); // Gearbox report while driving
-        bitWrite(canMsgSnd.data[6], 1, bitRead(canMsgRcv.data[6], 5)); // Gearbox report while driving
-        bitWrite(canMsgSnd.data[6], 0, 0);
-        canMsgSnd.data[7] = canMsgRcv.data[7];
-        canMsgSnd.can_id = 0x168;
-        canMsgSnd.can_dlc = 8;
-
+        translate_canframe_168(canMsgRcv, canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
         if (Send_CAN2010_ForgedMessages) { // Will generate some light issues on the instrument panel
           CAN0.sendMessage( & canMsgSnd);
@@ -1878,6 +1861,27 @@ bool forge_canframe_5E5(can_frame &frame) {
     frame.data[5] = 0x01;
     frame.data[6] = 0x20;
     frame.data[7] = 0x11;
+    return true;
+}
+
+bool translate_canframe_168(const can_frame &recv, can_frame &send) {
+    send.can_id = 0x168;
+    send.can_dlc = 8;
+    send.data[0] = recv.data[0]; // Alerts
+    send.data[1] = recv.data[1];
+    send.data[2] = recv.data[2];
+    send.data[3] = recv.data[3];
+    send.data[4] = recv.data[4];
+    send.data[5] = recv.data[5];
+    bitWrite(send.data[6], 7, 0);
+    bitWrite(send.data[6], 6, 1); // Ambiance
+    bitWrite(send.data[6], 5, 1); // EMF availability
+    bitWrite(send.data[6], 4, bitRead(recv.data[5], 0)); // Gearbox report while driving
+    bitWrite(send.data[6], 3, bitRead(recv.data[6], 7)); // Gearbox report while driving
+    bitWrite(send.data[6], 2, bitRead(recv.data[6], 6)); // Gearbox report while driving
+    bitWrite(send.data[6], 1, bitRead(recv.data[6], 5)); // Gearbox report while driving
+    bitWrite(send.data[6], 0, 0);
+    send.data[7] = recv.data[7];
     return true;
 }
 

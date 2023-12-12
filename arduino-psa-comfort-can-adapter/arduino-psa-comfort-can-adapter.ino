@@ -48,6 +48,7 @@ void debug_print(const char* fmt, ...);
 void debug_print_can(can_frame &frame);
 bool forge_canframe_5E5(can_frame &frame);
 bool translate_canframe_0E6(const can_frame &recv, can_frame &send);
+bool translate_canframe_0F6(const can_frame &recv, can_frame &send);
 bool translate_canframe_168(const can_frame &recv, can_frame &send);
 bool translate_canframe_120(const can_frame &recv, can_frame &send);
 bool translate_canframe_128(const can_frame &recv, can_frame &send);
@@ -834,27 +835,7 @@ void loop() {
           CAN0.sendMessage( & canMsgSnd);
         }
       } else if (id == 0xF6 && len == 8) {
-        tmpVal = canMsgRcv.data[0];
-        if (tmpVal > 128) {
-          if (!Ignition) {
-            debug_print("Ignition ON");
-          }
-
-          Ignition = true;
-        } else {
-          if (Ignition) {
-            debug_print("Ignition OFF");
-          }
-
-          Ignition = false;
-        }
-
-        tmpVal = (canMsgRcv.data[5] >> 1) - 40; // Temperatures can be negative but we only have 0 > 255, the new range is starting from -40°C (formula: canMsgRcv.data[5]/2 -40)
-        if (Temperature != tmpVal) {
-          Temperature = tmpVal;
-          debug_print("Ext. Temperature: %i °C", tmpVal);
-        }
-
+        translate_canframe_0F6(canMsgRcv, canMsgSnd);
         CAN1.sendMessage( & canMsgRcv);
       } else if (id == 0x168 && len == 8) { // Instrument Panel - WIP
         translate_canframe_168(canMsgRcv, canMsgSnd);
@@ -1570,6 +1551,29 @@ bool forge_canframe_5E5(can_frame &frame) {
     frame.data[5] = 0x01;
     frame.data[6] = 0x20;
     frame.data[7] = 0x11;
+    return true;
+}
+
+bool translate_canframe_0F6(const can_frame &recv, can_frame &send) {
+    if ((recv.data[0] & 0x80) == 0x80) {
+        if (!Ignition) {
+            debug_print("Ignition ON");
+        }
+        Ignition = true;
+    } else {
+        if (Ignition) {
+            debug_print("Ignition OFF");
+        }
+        Ignition = false;
+    }
+    // Temperatures can be negative but we only have 0 > 255, the new range is starting from -40°C (formula: canMsgRcv.data[5]/2 -40)
+    int newTemperature = (canMsgRcv.data[5] >> 1) - 40;
+    if (Temperature != newTemperature) {
+        Temperature = newTemperature;
+        debug_print("Ext. Temperature: %i °C", newTemperature);
+    }
+    // Forward original frame
+    memcpy(&send, &recv, sizeof(can_frame));
     return true;
 }
 

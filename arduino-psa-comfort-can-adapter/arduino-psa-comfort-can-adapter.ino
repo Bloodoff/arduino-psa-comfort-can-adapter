@@ -50,6 +50,7 @@ bool forge_canframe_5E5(can_frame &frame);
 bool translate_canframe_0E6(const can_frame &recv, can_frame &send);
 bool translate_canframe_168(const can_frame &recv, can_frame &send);
 bool translate_canframe_120(const can_frame &recv, can_frame &send);
+bool translate_canframe_128(const can_frame &recv, can_frame &send);
 bool translate_canframe_3A7(const can_frame &recv, can_frame &send);
 ////////////////////
 // Initialization //
@@ -896,65 +897,7 @@ void loop() {
 
         CAN0.sendMessage( & canMsgSnd);
       } else if (id == 0x128 && len == 8) { // Instrument Panel
-        canMsgSnd.data[0] = canMsgRcv.data[4]; // Main driving lights
-        bitWrite(canMsgSnd.data[1], 7, bitRead(canMsgRcv.data[6], 7)); // Gearbox report
-        bitWrite(canMsgSnd.data[1], 6, bitRead(canMsgRcv.data[6], 6)); // Gearbox report
-        bitWrite(canMsgSnd.data[1], 5, bitRead(canMsgRcv.data[6], 5)); // Gearbox report
-        bitWrite(canMsgSnd.data[1], 4, bitRead(canMsgRcv.data[6], 4)); // Gearbox report
-        bitWrite(canMsgSnd.data[1], 3, bitRead(canMsgRcv.data[6], 3)); // Gearbox report while driving
-        bitWrite(canMsgSnd.data[1], 2, bitRead(canMsgRcv.data[6], 2)); // Gearbox report while driving
-        bitWrite(canMsgSnd.data[1], 1, bitRead(canMsgRcv.data[6], 1)); // Gearbox report while driving
-        bitWrite(canMsgSnd.data[1], 0, bitRead(canMsgRcv.data[6], 0)); // Gearbox report blinking
-        bitWrite(canMsgSnd.data[2], 7, bitRead(canMsgRcv.data[7], 7)); // Arrow blinking
-        bitWrite(canMsgSnd.data[2], 6, bitRead(canMsgRcv.data[7], 6)); // BVA mode
-        bitWrite(canMsgSnd.data[2], 5, bitRead(canMsgRcv.data[7], 5)); // BVA mode
-        bitWrite(canMsgSnd.data[2], 4, bitRead(canMsgRcv.data[7], 4)); // BVA mode
-        bitWrite(canMsgSnd.data[2], 3, bitRead(canMsgRcv.data[7], 3)); // Arrow type
-        bitWrite(canMsgSnd.data[2], 2, bitRead(canMsgRcv.data[7], 2)); // Arrow type
-        if (bitRead(canMsgRcv.data[7], 1) == 1 && bitRead(canMsgRcv.data[7], 0) == 0) { // BVMP to BVA
-          isBVMP = true;
-          bitWrite(canMsgSnd.data[2], 1, 0); // Gearbox type
-          bitWrite(canMsgSnd.data[2], 0, 0); // Gearbox type
-        } else {
-          bitWrite(canMsgSnd.data[2], 1, bitRead(canMsgRcv.data[7], 1)); // Gearbox type
-          bitWrite(canMsgSnd.data[2], 0, bitRead(canMsgRcv.data[7], 0)); // Gearbox type
-        }
-        bitWrite(canMsgSnd.data[3], 7, bitRead(canMsgRcv.data[1], 7)); // Service
-        bitWrite(canMsgSnd.data[3], 6, bitRead(canMsgRcv.data[1], 6)); // STOP
-        bitWrite(canMsgSnd.data[3], 5, bitRead(canMsgRcv.data[2], 5)); // Child security
-        bitWrite(canMsgSnd.data[3], 4, bitRead(canMsgRcv.data[0], 7)); // Passenger Airbag
-        bitWrite(canMsgSnd.data[3], 3, bitRead(canMsgRcv.data[3], 2)); // Foot on brake
-        bitWrite(canMsgSnd.data[3], 2, bitRead(canMsgRcv.data[3], 1)); // Foot on brake
-        bitWrite(canMsgSnd.data[3], 1, bitRead(canMsgRcv.data[0], 5)); // Parking brake
-        bitWrite(canMsgSnd.data[3], 0, 0); // Electric parking brake
-        bitWrite(canMsgSnd.data[4], 7, bitRead(canMsgRcv.data[0], 2)); // Diesel pre-heating
-        bitWrite(canMsgSnd.data[4], 6, bitRead(canMsgRcv.data[1], 4)); // Opening open
-        bitWrite(canMsgSnd.data[4], 5, bitRead(canMsgRcv.data[3], 4)); // Automatic parking
-        bitWrite(canMsgSnd.data[4], 4, bitRead(canMsgRcv.data[3], 3)); // Automatic parking blinking
-        bitWrite(canMsgSnd.data[4], 3, 0); // Automatic high beam
-        bitWrite(canMsgSnd.data[4], 2, bitRead(canMsgRcv.data[2], 4)); // ESP Disabled
-        bitWrite(canMsgSnd.data[4], 1, bitRead(canMsgRcv.data[2], 3)); // ESP active
-        bitWrite(canMsgSnd.data[4], 0, bitRead(canMsgRcv.data[2], 2)); // Active suspension
-        bitWrite(canMsgSnd.data[5], 7, bitRead(canMsgRcv.data[0], 4)); // Low fuel
-        bitWrite(canMsgSnd.data[5], 6, bitRead(canMsgRcv.data[0], 6)); // Driver seatbelt
-        bitWrite(canMsgSnd.data[5], 5, bitRead(canMsgRcv.data[3], 7)); // Driver seatbelt blinking
-        bitWrite(canMsgSnd.data[5], 4, bitRead(canMsgRcv.data[0], 1)); // Passenger seatbelt
-        bitWrite(canMsgSnd.data[5], 3, bitRead(canMsgRcv.data[3], 6)); // Passenger seatbelt Blinking
-        bitWrite(canMsgSnd.data[5], 2, 0); // SCR
-        bitWrite(canMsgSnd.data[5], 1, 0); // SCR
-        bitWrite(canMsgSnd.data[5], 0, bitRead(canMsgRcv.data[5], 6)); // Rear left seatbelt
-        bitWrite(canMsgSnd.data[6], 7, bitRead(canMsgRcv.data[5], 5)); // Rear seatbelt left blinking
-        bitWrite(canMsgSnd.data[6], 6, bitRead(canMsgRcv.data[5], 2)); // Rear right seatbelt
-        bitWrite(canMsgSnd.data[6], 5, bitRead(canMsgRcv.data[5], 1)); // Rear right seatbelt blinking
-        bitWrite(canMsgSnd.data[6], 4, bitRead(canMsgRcv.data[5], 4)); // Rear middle seatbelt
-        bitWrite(canMsgSnd.data[6], 3, bitRead(canMsgRcv.data[5], 3)); // Rear middle seatbelt blinking
-        bitWrite(canMsgSnd.data[6], 2, bitRead(canMsgRcv.data[5], 7)); // Instrument Panel ON
-        bitWrite(canMsgSnd.data[6], 1, bitRead(canMsgRcv.data[2], 1)); // Warnings
-        bitWrite(canMsgSnd.data[6], 0, 0); // Passenger protection
-        canMsgSnd.data[7] = 0x00;
-        canMsgSnd.can_id = 0x128;
-        canMsgSnd.can_dlc = 8;
-
+        translate_canframe_128(canMsgRcv, canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
         if (Send_CAN2010_ForgedMessages) { // Will generate some light issues on the instrument panel
           CAN0.sendMessage( & canMsgSnd);
@@ -1627,6 +1570,69 @@ bool forge_canframe_5E5(can_frame &frame) {
     frame.data[5] = 0x01;
     frame.data[6] = 0x20;
     frame.data[7] = 0x11;
+    return true;
+}
+
+bool translate_canframe_128(const can_frame &recv, can_frame &send) {
+    send.can_id = 0x128;
+    send.can_dlc = 8;
+
+    send.data[0] = recv.data[4]; // Main driving lights
+    bitWrite(send.data[1], 7, bitRead(recv.data[6], 7)); // Gearbox report
+    bitWrite(send.data[1], 6, bitRead(recv.data[6], 6)); // Gearbox report
+    bitWrite(send.data[1], 5, bitRead(recv.data[6], 5)); // Gearbox report
+    bitWrite(send.data[1], 4, bitRead(recv.data[6], 4)); // Gearbox report
+    bitWrite(send.data[1], 3, bitRead(recv.data[6], 3)); // Gearbox report while driving
+    bitWrite(send.data[1], 2, bitRead(recv.data[6], 2)); // Gearbox report while driving
+    bitWrite(send.data[1], 1, bitRead(recv.data[6], 1)); // Gearbox report while driving
+    bitWrite(send.data[1], 0, bitRead(recv.data[6], 0)); // Gearbox report blinking
+    bitWrite(send.data[2], 7, bitRead(recv.data[7], 7)); // Arrow blinking
+    bitWrite(send.data[2], 6, bitRead(recv.data[7], 6)); // BVA mode
+    bitWrite(send.data[2], 5, bitRead(recv.data[7], 5)); // BVA mode
+    bitWrite(send.data[2], 4, bitRead(recv.data[7], 4)); // BVA mode
+    bitWrite(send.data[2], 3, bitRead(recv.data[7], 3)); // Arrow type
+    bitWrite(send.data[2], 2, bitRead(recv.data[7], 2)); // Arrow type
+    if (bitRead(recv.data[7], 1) == 1 && bitRead(recv.data[7], 0) == 0) { // BVMP to BVA
+        isBVMP = true;
+        bitWrite(send.data[2], 1, 0); // Gearbox type
+        bitWrite(send.data[2], 0, 0); // Gearbox type
+    } else {
+        bitWrite(send.data[2], 1, bitRead(recv.data[7], 1)); // Gearbox type
+        bitWrite(send.data[2], 0, bitRead(recv.data[7], 0)); // Gearbox type
+    }
+    bitWrite(send.data[3], 7, bitRead(recv.data[1], 7)); // Service
+    bitWrite(send.data[3], 6, bitRead(recv.data[1], 6)); // STOP
+    bitWrite(send.data[3], 5, bitRead(recv.data[2], 5)); // Child security
+    bitWrite(send.data[3], 4, bitRead(recv.data[0], 7)); // Passenger Airbag
+    bitWrite(send.data[3], 3, bitRead(recv.data[3], 2)); // Foot on brake
+    bitWrite(send.data[3], 2, bitRead(recv.data[3], 1)); // Foot on brake
+    bitWrite(send.data[3], 1, bitRead(recv.data[0], 5)); // Parking brake
+    bitWrite(send.data[3], 0, 0); // Electric parking brake
+    bitWrite(send.data[4], 7, bitRead(recv.data[0], 2)); // Diesel pre-heating
+    bitWrite(send.data[4], 6, bitRead(recv.data[1], 4)); // Opening open
+    bitWrite(send.data[4], 5, bitRead(recv.data[3], 4)); // Automatic parking
+    bitWrite(send.data[4], 4, bitRead(recv.data[3], 3)); // Automatic parking blinking
+    bitWrite(send.data[4], 3, 0); // Automatic high beam
+    bitWrite(send.data[4], 2, bitRead(recv.data[2], 4)); // ESP Disabled
+    bitWrite(send.data[4], 1, bitRead(recv.data[2], 3)); // ESP active
+    bitWrite(send.data[4], 0, bitRead(recv.data[2], 2)); // Active suspension
+    bitWrite(send.data[5], 7, bitRead(recv.data[0], 4)); // Low fuel
+    bitWrite(send.data[5], 6, bitRead(recv.data[0], 6)); // Driver seatbelt
+    bitWrite(send.data[5], 5, bitRead(recv.data[3], 7)); // Driver seatbelt blinking
+    bitWrite(send.data[5], 4, bitRead(recv.data[0], 1)); // Passenger seatbelt
+    bitWrite(send.data[5], 3, bitRead(recv.data[3], 6)); // Passenger seatbelt Blinking
+    bitWrite(send.data[5], 2, 0); // SCR
+    bitWrite(send.data[5], 1, 0); // SCR
+    bitWrite(send.data[5], 0, bitRead(recv.data[5], 6)); // Rear left seatbelt
+    bitWrite(send.data[6], 7, bitRead(recv.data[5], 5)); // Rear seatbelt left blinking
+    bitWrite(send.data[6], 6, bitRead(recv.data[5], 2)); // Rear right seatbelt
+    bitWrite(send.data[6], 5, bitRead(recv.data[5], 1)); // Rear right seatbelt blinking
+    bitWrite(send.data[6], 4, bitRead(recv.data[5], 4)); // Rear middle seatbelt
+    bitWrite(send.data[6], 3, bitRead(recv.data[5], 3)); // Rear middle seatbelt blinking
+    bitWrite(send.data[6], 2, bitRead(recv.data[5], 7)); // Instrument Panel ON
+    bitWrite(send.data[6], 1, bitRead(recv.data[2], 1)); // Warnings
+    bitWrite(send.data[6], 0, 0); // Passenger protection
+    send.data[7] = 0x00;
     return true;
 }
 

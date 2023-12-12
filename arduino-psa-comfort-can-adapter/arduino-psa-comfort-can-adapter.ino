@@ -47,6 +47,7 @@ byte checksumm_0E6(const byte* frame);
 void debug_print(const char* fmt, ...);
 void debug_print_can(can_frame &frame);
 bool forge_canframe_5E5(can_frame &frame);
+bool translate_canframe_036(const can_frame &recv, can_frame &send);
 bool translate_canframe_0E6(const can_frame &recv, can_frame &send);
 bool translate_canframe_0F6(const can_frame &recv, can_frame &send);
 bool translate_canframe_168(const can_frame &recv, can_frame &send);
@@ -412,27 +413,8 @@ void loop() {
       if (id == 0x15B) {
         // Do not send back converted frames between networks
       } else if (id == 0x36 && len == 8) { // Economy Mode detection
-        if (bitRead(canMsgRcv.data[2], 7) == 1) {
-          if (!EconomyMode) {
-            debug_print("Economy mode ON");
-          }
-
-          EconomyMode = true;
-        } else {
-          if (EconomyMode) {
-            debug_print("Economy mode OFF");
-          }
-
-          EconomyMode = false;
-        }
-
-        tmpVal = canMsgRcv.data[3];
-
-        // Fix brightness when car lights are ON - Brightness Instrument Panel "20" > "2F" (32 > 47) - Depends on your car
-        if (fixedBrightness && tmpVal >= 32) {
-          canMsgRcv.data[3] = 0x28; // Set fixed value to avoid low brightness due to incorrect CAN2010 Telematic calibration
-        }
-        CAN1.sendMessage( & canMsgRcv);
+        translate_canframe_036(canMsgRcv, canMsgSnd);
+        CAN1.sendMessage( & canMsgSnd);
       } else if (id == 0xB6 && len == 8) {
         engineRPM = ((canMsgRcv.data[0] << 8) | canMsgRcv.data[1]) * 0.125;
         if (engineRPM > 0) {
@@ -1551,6 +1533,27 @@ bool forge_canframe_5E5(can_frame &frame) {
     frame.data[5] = 0x01;
     frame.data[6] = 0x20;
     frame.data[7] = 0x11;
+    return true;
+}
+
+bool translate_canframe_036(const can_frame &recv, can_frame &send) {
+    memcpy(&send, &recv, sizeof(can_frame));
+    if (bitRead(recv.data[2], 7) == 1) {
+        if (!EconomyMode) {
+            debug_print("Economy mode ON");
+        }
+        EconomyMode = true;
+    } else {
+        if (EconomyMode) {
+            debug_print("Economy mode OFF");
+        }
+        EconomyMode = false;
+    }
+    uint8_t brightness = canMsgRcv.data[3];
+    // Fix brightness when car lights are ON - Brightness Instrument Panel "20" > "2F" (32 > 47) - Depends on your car
+    if (fixedBrightness && (brightness >= 32)) {
+        send.data[3] = 0x28; // Set fixed value to avoid low brightness due to incorrect CAN2010 Telematic calibration
+    }
     return true;
 }
 

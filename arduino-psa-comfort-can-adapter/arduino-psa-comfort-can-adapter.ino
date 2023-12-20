@@ -46,7 +46,11 @@ all copies or substantial portions of the Software.
 byte checksumm_0E6(const byte* frame);
 void debug_print(const char* fmt, ...);
 void debug_print_can(can_frame &frame);
+bool forge_canframe_2B6(can_frame &frame);
+bool forge_canframe_336(can_frame &frame);
+bool forge_canframe_3B6(can_frame &frame);
 bool forge_canframe_5E5(can_frame &frame);
+
 bool translate_canframe_036(const can_frame &recv, can_frame &send);
 bool translate_canframe_0E6(const can_frame &recv, can_frame &send);
 bool translate_canframe_0F6(const can_frame &recv, can_frame &send);
@@ -88,8 +92,10 @@ bool resetEEPROM = false; // Switch to true to reset all EEPROM values
 bool CVM_Emul = true; // Send suggested speed from Telematic to fake CVM (Multifunction camera inside the windshield) frame
 bool generatePOPups = false; // Generate notifications from alerts journal - useful for C5 (X7)
 
-bool emulateVIN = false; // Replace network VIN by another (donor car for example)
-char vinNumber[18] = "VF3XXXXXXXXXXXXXX";
+const struct {
+    bool emulateVIN = false;
+    char vinNumber[18] = "VF3XXXXXXXXXXXXXX";
+} GateConfig;
 
 bool hasAnalogicButtons = false; // Analog buttons instead of FMUX
 byte menuButton = 4;
@@ -127,7 +133,7 @@ long debounceDelay = 100;
 int daysSinceYearStart = 0;
 unsigned long customTimeStamp = 0;
 int vehicleSpeed = 0;
-int engineRPM = 0;
+unsigned int engineRPM = 0;
 bool darkMode = false;
 bool resetTrip1 = false;
 bool resetTrip2 = false;
@@ -418,7 +424,7 @@ void loop() {
         translate_canframe_036(canMsgRcv, canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
       } else if (id == 0xB6 && len == 8) {
-        engineRPM = ((canMsgRcv.data[0] << 8) | canMsgRcv.data[1]) * 0.125;
+        engineRPM = ((canMsgRcv.data[0] << 8) | canMsgRcv.data[1]) >> 3; // Divide by 8 ( >> 3)
         if (engineRPM > 0) {
           EngineRunning = true;
         } else {
@@ -426,34 +432,14 @@ void loop() {
         }
         vehicleSpeed = ((canMsgRcv.data[2] << 8) | canMsgRcv.data[3]) * 0.01;
         CAN1.sendMessage( & canMsgRcv);
-      } else if (id == 0x336 && len == 3 && emulateVIN) { // ASCII coded first 3 letters of VIN
-        canMsgSnd.data[0] = vinNumber[0]; //V
-        canMsgSnd.data[1] = vinNumber[1]; //F
-        canMsgSnd.data[2] = vinNumber[2]; //3
-        canMsgSnd.can_id = 0x336;
-        canMsgSnd.can_dlc = 3;
+      } else if (id == 0x336 && len == 3 && GateConfig.emulateVIN) { // ASCII coded first 3 letters of VIN
+        forge_canframe_336(canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
-      } else if (id == 0x3B6 && len == 6 && emulateVIN) { // ASCII coded 4-9 letters of VIN
-        canMsgSnd.data[0] = vinNumber[3]; //X
-        canMsgSnd.data[1] = vinNumber[4]; //X
-        canMsgSnd.data[2] = vinNumber[5]; //X
-        canMsgSnd.data[3] = vinNumber[6]; //X
-        canMsgSnd.data[4] = vinNumber[7]; //X
-        canMsgSnd.data[5] = vinNumber[8]; //X
-        canMsgSnd.can_id = 0x3B6;
-        canMsgSnd.can_dlc = 6;
+      } else if (id == 0x3B6 && len == 6 && GateConfig.emulateVIN) { // ASCII coded 4-9 letters of VIN
+        forge_canframe_3B6(canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
-      } else if (id == 0x2B6 && len == 8 && emulateVIN) { // ASCII coded 10-17 letters (last 8) of VIN
-        canMsgSnd.data[0] = vinNumber[9]; //X
-        canMsgSnd.data[1] = vinNumber[10]; //X
-        canMsgSnd.data[2] = vinNumber[11]; //X
-        canMsgSnd.data[3] = vinNumber[12]; //X
-        canMsgSnd.data[4] = vinNumber[13]; //X
-        canMsgSnd.data[5] = vinNumber[14]; //X
-        canMsgSnd.data[6] = vinNumber[15]; //X
-        canMsgSnd.data[7] = vinNumber[16]; //X
-        canMsgSnd.can_id = 0x2B6;
-        canMsgSnd.can_dlc = 8;
+      } else if (id == 0x2B6 && len == 8 && GateConfig.emulateVIN) { // ASCII coded 10-17 letters (last 8) of VIN
+        forge_canframe_2B6(canMsgSnd);
         CAN1.sendMessage( & canMsgSnd);
       } else if (id == 0xE6 && len < 8) { // ABS status frame, increase length
         translate_canframe_0E6(canMsgRcv, canMsgSnd);
@@ -1519,7 +1505,41 @@ void sendPOPup(bool present, int id, byte priority, byte parameters) {
   return;
 }
 
+bool forge_canframe_2B6(can_frame &frame) {
+    frame.can_id = 0x2B6;
+    frame.can_dlc = 8;
+    frame.data[0] = GateConfig.vinNumber[9]; //X
+    frame.data[1] = GateConfig.vinNumber[10]; //X
+    frame.data[2] = GateConfig.vinNumber[11]; //X
+    frame.data[3] = GateConfig.vinNumber[12]; //X
+    frame.data[4] = GateConfig.vinNumber[13]; //X
+    frame.data[5] = GateConfig.vinNumber[14]; //X
+    frame.data[6] = GateConfig.vinNumber[15]; //X
+    frame.data[7] = GateConfig.vinNumber[16]; //X
+    return true;
+}
 
+bool forge_canframe_336(can_frame &frame) {
+    frame.can_id = 0x336;
+    frame.can_dlc = 3;
+    frame.data[0] = GateConfig.vinNumber[0]; //V
+    frame.data[1] = GateConfig.vinNumber[1]; //F
+    frame.data[2] = GateConfig.vinNumber[2]; //3
+    return true;
+}
+
+bool forge_canframe_3B6(can_frame &frame) {
+    frame.can_id = 0x3B6;
+    frame.can_dlc = 6;
+    frame.data[0] = GateConfig.vinNumber[3]; //X
+    frame.data[1] = GateConfig.vinNumber[4]; //X
+    frame.data[2] = GateConfig.vinNumber[5]; //X
+    frame.data[3] = GateConfig.vinNumber[6]; //X
+    frame.data[4] = GateConfig.vinNumber[7]; //X
+    frame.data[5] = GateConfig.vinNumber[8]; //X
+    return true;
+}  
+ 
 bool forge_canframe_5E5(can_frame &frame) {
     frame.can_id = 0x5E5;
     frame.can_dlc = 8;
